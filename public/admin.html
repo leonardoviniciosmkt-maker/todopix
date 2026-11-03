@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Gaveta · Painel</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+:root { --bg: #0b1410; --card: #13211b; --line: rgba(255,255,255,.1); --fg: #f1efe6; --muted: #9fb0a7; --yellow: #ffc93c; --green: #3ddc84; --red: #ff4848; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 Inter, system-ui, sans-serif; }
+main { max-width: 760px; margin: 0 auto; padding: 32px max(16px, env(safe-area-inset-left, 0px)) 64px max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 20px; }
+h1 { font: 800 30px Poppins, sans-serif; margin: 0; } h1 span { color: var(--yellow); }
+form { display: flex; flex-wrap: wrap; gap: 10px; }
+input { background: #0a110e; color: var(--fg); border: 1px solid rgba(255,255,255,.18); border-radius: 12px; padding: 12px 14px; font: inherit; flex: 1 1 160px; min-width: 0; }
+button { background: var(--yellow); color: #111; border: 0; border-radius: 999px; padding: 12px 20px; font: 700 15px Poppins, sans-serif; cursor: pointer; }
+button.o { background: transparent; color: var(--fg); border: 1px solid rgba(255,255,255,.25); }
+.stats { display: flex; flex-wrap: wrap; gap: 12px; }
+.stat { flex: 1 1 140px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+.stat b { display: block; font: 800 28px Poppins, sans-serif; color: var(--green); font-variant-numeric: tabular-nums; }
+.stat span { color: var(--muted); font-size: 13px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); }
+th { color: var(--muted); font: 500 12px "JetBrains Mono", monospace; letter-spacing: .08em; }
+.wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+textarea { width: 100%; min-height: 90px; background: #0a110e; color: var(--fg); border: 1px solid rgba(255,255,255,.18); border-radius: 12px; padding: 12px; font: 14px "JetBrains Mono", monospace; }
+.err { color: var(--red); min-height: 1em; margin: 0; }
+.fine { color: var(--muted); font-size: 13px; margin: 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Gaveta <span>· painel</span></h1>
+  <p class="fine">Quem pagou o passe "Empreste seu @" em cada parte. Só abre com a senha que você cadastrou no Netlify (ADMIN_KEY).</p>
+  <form id="f">
+    <input id="key" type="password" placeholder="Senha do painel" autocomplete="current-password">
+    <input id="part" type="number" min="1" max="99" value="2" placeholder="Parte">
+    <button type="submit">Ver contas</button>
+  </form>
+  <p class="err" id="err" role="alert"></p>
+  <div class="stats" id="stats" hidden>
+    <div class="stat"><b id="sTotal">0</b><span>contas pagas nesta parte</span></div>
+    <div class="stat"><b id="sRev">R$ 0,00</b><span>receita bruta da parte</span></div>
+    <div class="stat"><b id="sPend">0</b><span>Pix gerados e não pagos</span></div>
+  </div>
+  <div id="out" hidden>
+    <p class="fine">Legenda pronta para o post:</p>
+    <textarea id="cap" readonly></textarea>
+    <p><button class="o" type="button" id="copy">Copiar legenda</button></p>
+    <div class="wrap"><table><thead><tr><th>CONTA</th><th>@</th><th>E-MAIL</th><th>PAGO EM</th><th>CÓDIGO</th></tr></thead><tbody id="rows"></tbody></table></div>
+  </div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+try { $("key").value = sessionStorage.getItem("k") || ""; } catch (e) {}
+$("f").addEventListener("submit", async (e) => {
+  e.preventDefault(); $("err").textContent = "";
+  try { sessionStorage.setItem("k", $("key").value); } catch (e) {}
+  const part = $("part").value;
+  const r = await fetch("/api/admin?part=" + encodeURIComponent(part), { headers: { "x-admin-key": $("key").value } });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { $("err").textContent = d.error || "Não foi possível carregar."; return; }
+  $("stats").hidden = false; $("out").hidden = false;
+  $("sTotal").textContent = d.total; $("sPend").textContent = d.pendentes;
+  $("sRev").textContent = "R$ " + d.receita.toFixed(2).replace(".", ",");
+  $("rows").replaceChildren(...d.aprovados.map(p => {
+    const tr = document.createElement("tr");
+    [String(p.conta).padStart(3, "0"), p.at, p.email, new Date(p.pagoEm).toLocaleString("pt-BR"), p.codigo].forEach(v => { const td = document.createElement("td"); td.textContent = v; tr.append(td); });
+    return tr;
+  }));
+  $("cap").value = d.aprovados.length ? "🗂️ Contas na gaveta deste capítulo: " + d.aprovados.map(p => p.at).join(" ") : "Nenhuma conta paga nesta parte ainda.";
+});
+$("copy").addEventListener("click", () => {
+  navigator.clipboard.writeText($("cap").value).then(() => $("copy").textContent = "Copiado ✓").catch(() => { $("cap").select(); });
+});
+</script>
+</body>
+</html>
