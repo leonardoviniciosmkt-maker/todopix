@@ -66,12 +66,27 @@ $("f").addEventListener("submit", async (e) => {
   $("sTotal").textContent = d.total; $("sPend").textContent = d.pendentes;
   $("sRev").textContent = "R$ " + d.receita.toFixed(2).replace(".", ",");
   const guia = d.product === "guia";
-  $("thead").innerHTML = guia ? "<tr><th>E-MAIL</th><th>PAGO EM</th><th>DOWNLOADS</th><th>LINK DE ACESSO</th></tr>" : "<tr><th>CONTA</th><th>@</th><th>E-MAIL</th><th>PAGO EM</th><th>CÓDIGO</th></tr>";
+  $("thead").innerHTML = guia ? "<tr><th>NOME</th><th>WHATSAPP</th><th>E-MAIL</th><th>PAGO EM</th><th>DOWNLOADS</th><th>ACESSO</th></tr>" : "<tr><th>CONTA</th><th>@</th><th>E-MAIL</th><th>PAGO EM</th><th>CÓDIGO</th></tr>";
   $("sTotalL").textContent = guia ? "guias vendidos" : "contas pagas nesta parte";
   $("rows").replaceChildren(...d.aprovados.map(p => {
     const tr = document.createElement("tr");
-    const vals = guia ? [p.email, new Date(p.pagoEm).toLocaleString("pt-BR"), p.downloads, p.acesso] : [String(p.conta).padStart(3, "0"), p.at, p.email, new Date(p.pagoEm).toLocaleString("pt-BR"), p.codigo];
-    vals.forEach(v => { const td = document.createElement("td"); td.textContent = v; if (guia && v === p.acesso) td.style.userSelect = "all"; tr.append(td); });
+    if (guia) {
+      const tel = String(p.telefone || "");
+      const cells = [p.nome || "—", null, p.email, new Date(p.pagoEm).toLocaleString("pt-BR"), p.downloads, null];
+      cells.forEach((v, i) => {
+        const td = document.createElement("td");
+        if (i === 1) {
+          if (tel) { const a = document.createElement("a"); const n = tel.startsWith("55") ? tel : "55" + tel; a.href = "https://wa.me/" + n; a.target = "_blank"; a.rel = "noopener"; a.textContent = tel; a.style.color = "#3ddc84"; td.append(a); } else td.textContent = "—";
+        } else if (i === 5) {
+          const b = document.createElement("button"); b.className = "o"; b.type = "button"; b.textContent = "Copiar link"; b.style.padding = "6px 12px";
+          b.addEventListener("click", () => navigator.clipboard.writeText(p.acesso).then(() => b.textContent = "Copiado ✓").catch(() => { b.textContent = p.acesso; }));
+          td.append(b);
+        } else td.textContent = v;
+        tr.append(td);
+      });
+    } else {
+      [String(p.conta).padStart(3, "0"), p.at, p.email, new Date(p.pagoEm).toLocaleString("pt-BR"), p.codigo].forEach(v => { const td = document.createElement("td"); td.textContent = v; tr.append(td); });
+    }
     return tr;
   }));
   $("capWrap").hidden = guia;

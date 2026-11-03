@@ -16,7 +16,7 @@ export default async (req) => {
   return json({
     product, part,
     aprovados: approved.map((p) => product === "guia"
-      ? { email: p.email, codigo: p.code, pagoEm: p.approvedAt, downloads: p.downloads || 0, acesso: `${site}/acesso.html?id=${p.id}&t=${p.token}` }
+      ? { nome: p.name || "", telefone: p.phone || "", email: p.email, codigo: p.code, pagoEm: p.approvedAt, downloads: p.downloads || 0, acesso: `${site}/acesso.html?id=${p.id}&t=${p.token}` }
       : { at: p.at, conta: p.number, email: p.email, codigo: p.code, pagoEm: p.approvedAt }),
     pendentes: pays.filter((p) => p.status !== "approved").length,
     total: approved.length,

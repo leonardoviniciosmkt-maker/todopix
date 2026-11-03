@@ -14,10 +14,14 @@ export default async (req) => {
 
   let record, description, amount, code;
   if (isGuide) {
+    const name = String(body.name || "").trim().slice(0, 80);
+    const phone = String(body.phone || "").replace(/\D/g, "");
+    if (name.length < 2) return json({ error: "Digite seu nome." }, 400);
+    if (phone.length < 10 || phone.length > 13) return json({ error: "Digite seu WhatsApp com DDD." }, 400);
     code = "G-" + crypto.randomUUID().slice(0, 8).toUpperCase();
     amount = GUIDE_PRICE;
     description = "Guia Bastidores · Todo Pix Tem CPF (PDF)";
-    record = { product: "guia", email, token: crypto.randomUUID().replace(/-/g, "") };
+    record = { product: "guia", email, name, phone, token: crypto.randomUUID().replace(/-/g, "") };
   } else {
     const at = cleanAt(body.at);
     const part = Number(body.part);
@@ -30,7 +34,7 @@ export default async (req) => {
   }
 
   try {
-    const pix = await mpCreatePix({ email, code, amount, description, siteUrl: process.env.URL });
+    const pix = await mpCreatePix({ email, code, amount, description, siteUrl: process.env.URL, name: record.name });
     await store().setJSON("pay/" + pix.id, { id: pix.id, code, ...record, status: pix.status, created: new Date().toISOString() });
     const out = { id: pix.id, code, qr: pix.qr, qrImg: pix.qrImg, price: amount };
     if (isGuide) out.token = record.token;

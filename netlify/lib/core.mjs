@@ -28,7 +28,7 @@ function token() {
   return t;
 }
 
-export async function mpCreatePix({ email, description, code, siteUrl, amount = PRICE, minutes = 30 }) {
+export async function mpCreatePix({ email, description, code, siteUrl, amount = PRICE, name, minutes = 30 }) {
   const exp = new Date(Date.now() + minutes * 60 * 1000).toISOString().replace("Z", "+00:00");
   const res = await fetch(MP + "/v1/payments", {
     method: "POST",
@@ -41,7 +41,7 @@ export async function mpCreatePix({ email, description, code, siteUrl, amount = 
       transaction_amount: amount,
       description,
       payment_method_id: "pix",
-      payer: { email },
+      payer: name ? { email, first_name: name.split(" ")[0], last_name: name.split(" ").slice(1).join(" ") || undefined } : { email },
       external_reference: code,
       notification_url: siteUrl ? siteUrl.replace(/\/$/, "") + "/api/webhook" : undefined,
       date_of_expiration: exp,

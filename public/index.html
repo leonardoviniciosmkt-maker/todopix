@@ -492,6 +492,12 @@ footer .copy { user-select: all; color: var(--fg); }
             <li>Ganhar dinheiro com Pix e marcas</li>
           </ol>
           <form id="gForm" novalidate style="margin-top:22px">
+            <label class="f" for="gName">Seu nome
+              <input type="text" id="gName" placeholder="Nome e sobrenome" autocomplete="name">
+            </label>
+            <label class="f" for="gTel">Seu WhatsApp (com DDD)
+              <input type="tel" id="gTel" placeholder="(11) 91234-5678" autocomplete="tel" inputmode="tel">
+            </label>
             <label class="f" for="gMail">Seu e-mail (o Mercado Pago manda o comprovante)
               <input type="email" id="gMail" placeholder="voce@email.com" autocomplete="email">
             </label>
@@ -822,11 +828,15 @@ let gTimer = null;
 $("gForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const mail = $("gMail").value.trim();
+  const name = $("gName").value.trim();
+  const tel = $("gTel").value.replace(/\D/g, "");
+  if (name.length < 2) return $("gErr").textContent = "Digite seu nome.";
+  if (tel.length < 10 || tel.length > 13) return $("gErr").textContent = "Digite seu WhatsApp com DDD.";
   if (!/^\S+@\S+\.\S+$/.test(mail)) return $("gErr").textContent = "Digite um e-mail válido.";
   $("gErr").textContent = "";
   const btn = $("gBtn"); const label = btn.textContent; btn.disabled = true; btn.textContent = "Gerando seu Pix…";
   try {
-    const r = await fetch(API + "/pix", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ product: "guia", email: mail }) });
+    const r = await fetch(API + "/pix", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ product: "guia", email: mail, name, phone: tel }) });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || "");
     try { localStorage.setItem("guia", JSON.stringify({ id: d.id, t: d.token })); } catch (x) {}
