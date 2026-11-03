@@ -2,6 +2,7 @@
 import { getStore } from "@netlify/blobs";
 
 export const PRICE = Number(process.env.PASS_PRICE || "9.90");
+export const GUIDE_PRICE = Number(process.env.GUIDE_PRICE || "29.90");
 const MP = "https://api.mercadopago.com";
 
 export function store() {
@@ -27,7 +28,7 @@ function token() {
   return t;
 }
 
-export async function mpCreatePix({ email, description, code, siteUrl, minutes = 30 }) {
+export async function mpCreatePix({ email, description, code, siteUrl, amount = PRICE, minutes = 30 }) {
   const exp = new Date(Date.now() + minutes * 60 * 1000).toISOString().replace("Z", "+00:00");
   const res = await fetch(MP + "/v1/payments", {
     method: "POST",
@@ -37,7 +38,7 @@ export async function mpCreatePix({ email, description, code, siteUrl, minutes =
       "X-Idempotency-Key": code,
     },
     body: JSON.stringify({
-      transaction_amount: PRICE,
+      transaction_amount: amount,
       description,
       payment_method_id: "pix",
       payer: { email },
@@ -64,7 +65,13 @@ export async function mpGet(id) {
 export async function recordApproved(s, payId) {
   const pay = await s.get("pay/" + payId, { type: "json" });
   if (!pay) return null;
-  if (pay.status === "approved" && pay.number) return pay;
+  if (pay.status === "approved" && (pay.number || pay.product === "guia")) return pay;
+  if (pay.product === "guia") {
+    pay.status = "approved";
+    pay.approvedAt = new Date().toISOString();
+    await s.setJSON("pay/" + payId, pay);
+    return pay;
+  }
   let acct = await s.get("acct/" + pay.at, { type: "json" });
   if (!acct) {
     const meta = (await s.get("meta/counter", { type: "json" })) || { n: 0 };

@@ -36,3 +36,9 @@ Abra o site, empreste um @ seu e pague R$ 9,90. Em poucos segundos aparece "CONT
 
 ## A cada episódio
 Mude no `public/index.html` o bloco `CONFIG` (próxima parte, horário, votação, capítulos, rastros). No GitHub, edite o arquivo ou envie o novo `index.html`: o Netlify publica sozinho em 1 minuto.
+
+## Guia em PDF (Bastidores)
+- O PDF fica em `netlify/assets/` e **não** é público: só baixa quem pagou, pelo link `/acesso.html?id=...&t=...` que aparece depois do Pix.
+- Preço: variável `GUIDE_PRICE` no Netlify (padrão `29.90`). Se mudar, mude também `guia.preco` no `CONFIG` do `index.html`.
+- No painel `/admin.html`, escolha "Guia em PDF" para ver quem comprou, quantas vezes baixou e o link de acesso de cada um (para reenviar pelo WhatsApp).
+- Suporte do guia: WhatsApp +55 11 5236-0210.

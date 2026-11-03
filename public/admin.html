@@ -35,20 +35,21 @@ textarea { width: 100%; min-height: 90px; background: #0a110e; color: var(--fg);
   <p class="fine">Quem pagou o passe "Empreste seu @" em cada parte. Só abre com a senha que você cadastrou no Netlify (ADMIN_KEY).</p>
   <form id="f">
     <input id="key" type="password" placeholder="Senha do painel" autocomplete="current-password">
-    <input id="part" type="number" min="1" max="99" value="2" placeholder="Parte">
+    <select id="prod" style="background:#0a110e;color:#f1efe6;border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:12px 14px;font:inherit"><option value="passe">Empreste seu @</option><option value="guia">Guia em PDF</option></select>
+    <input id="part" type="number" min="1" max="99" value="3" placeholder="Parte">
     <button type="submit">Ver contas</button>
   </form>
   <p class="err" id="err" role="alert"></p>
   <div class="stats" id="stats" hidden>
-    <div class="stat"><b id="sTotal">0</b><span>contas pagas nesta parte</span></div>
-    <div class="stat"><b id="sRev">R$ 0,00</b><span>receita bruta da parte</span></div>
+    <div class="stat"><b id="sTotal">0</b><span id="sTotalL">contas pagas nesta parte</span></div>
+    <div class="stat"><b id="sRev">R$ 0,00</b><span>receita bruta</span></div>
     <div class="stat"><b id="sPend">0</b><span>Pix gerados e não pagos</span></div>
   </div>
   <div id="out" hidden>
-    <p class="fine">Legenda pronta para o post:</p>
+    <div id="capWrap"><p class="fine">Legenda pronta para o post:</p>
     <textarea id="cap" readonly></textarea>
-    <p><button class="o" type="button" id="copy">Copiar legenda</button></p>
-    <div class="wrap"><table><thead><tr><th>CONTA</th><th>@</th><th>E-MAIL</th><th>PAGO EM</th><th>CÓDIGO</th></tr></thead><tbody id="rows"></tbody></table></div>
+    <p><button class="o" type="button" id="copy">Copiar legenda</button></p></div>
+    <div class="wrap"><table><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
   </div>
 </main>
 <script>
@@ -57,18 +58,23 @@ try { $("key").value = sessionStorage.getItem("k") || ""; } catch (e) {}
 $("f").addEventListener("submit", async (e) => {
   e.preventDefault(); $("err").textContent = "";
   try { sessionStorage.setItem("k", $("key").value); } catch (e) {}
-  const part = $("part").value;
-  const r = await fetch("/api/admin?part=" + encodeURIComponent(part), { headers: { "x-admin-key": $("key").value } });
+  const part = $("part").value; const prod = $("prod").value;
+  const r = await fetch("/api/admin?" + (prod === "guia" ? "product=guia" : "part=" + encodeURIComponent(part)), { headers: { "x-admin-key": $("key").value } });
   const d = await r.json().catch(() => ({}));
   if (!r.ok) { $("err").textContent = d.error || "Não foi possível carregar."; return; }
   $("stats").hidden = false; $("out").hidden = false;
   $("sTotal").textContent = d.total; $("sPend").textContent = d.pendentes;
   $("sRev").textContent = "R$ " + d.receita.toFixed(2).replace(".", ",");
+  const guia = d.product === "guia";
+  $("thead").innerHTML = guia ? "<tr><th>E-MAIL</th><th>PAGO EM</th><th>DOWNLOADS</th><th>LINK DE ACESSO</th></tr>" : "<tr><th>CONTA</th><th>@</th><th>E-MAIL</th><th>PAGO EM</th><th>CÓDIGO</th></tr>";
+  $("sTotalL").textContent = guia ? "guias vendidos" : "contas pagas nesta parte";
   $("rows").replaceChildren(...d.aprovados.map(p => {
     const tr = document.createElement("tr");
-    [String(p.conta).padStart(3, "0"), p.at, p.email, new Date(p.pagoEm).toLocaleString("pt-BR"), p.codigo].forEach(v => { const td = document.createElement("td"); td.textContent = v; tr.append(td); });
+    const vals = guia ? [p.email, new Date(p.pagoEm).toLocaleString("pt-BR"), p.downloads, p.acesso] : [String(p.conta).padStart(3, "0"), p.at, p.email, new Date(p.pagoEm).toLocaleString("pt-BR"), p.codigo];
+    vals.forEach(v => { const td = document.createElement("td"); td.textContent = v; if (guia && v === p.acesso) td.style.userSelect = "all"; tr.append(td); });
     return tr;
   }));
+  $("capWrap").hidden = guia;
   $("cap").value = d.aprovados.length ? "🗂️ Contas na gaveta deste capítulo: " + d.aprovados.map(p => p.at).join(" ") : "Nenhuma conta paga nesta parte ainda.";
 });
 $("copy").addEventListener("click", () => {
